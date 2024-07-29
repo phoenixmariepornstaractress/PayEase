@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Form</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.9/flatpickr.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #555;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            border-color: #007BFF;
+            outline: none;
+        }
+
+        .form-group button {
+            padding: 10px 15px;
+            background-color: #007BFF;
+            border: none;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .form-group button:hover {
+            background-color: #0056b3;
+        }
+
+        .error {
+            color: red;
+            font-size: 0.875rem;
+            margin-top: 5px;
+        }
+
+        .loading-spinner {
+            display: none;
+            margin: 0 auto;
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid #007BFF;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Payment Form</h2>
+        <form id="payment-form">
+            <div class="form-group">
+                <label for="cardNumber">Credit Card Number</label>
+                <input type="text" id="cardNumber" name="cardNumber" placeholder="1234 5678 9012 3456" maxlength="19">
+                <span id="cardNumberError" class="error"></span>
+            </div>
+            <div class="form-group">
+                <label for="expiryDate">Expiry Date</label>
+                <input type="text" id="expiryDate" name="expiryDate" placeholder="MM/YY">
+                <span id="expiryDateError" class="error"></span>
+            </div>
+            <div class="form-group">
+                <label for="cvv">CVV</label>
+                <input type="text" id="cvv" name="cvv" placeholder="123" maxlength="3">
+                <span id="cvvError" class="error"></span>
+            </div>
+            <div class="form-group">
+                <label for="billingAddress">Billing Address</label>
+                <input type="text" id="billingAddress" name="billingAddress" placeholder="123 Main St">
+                <span id="billingAddressError" class="error"></span>
+            </div>
+            <div class="form-group">
+                <label for="country">Country</label>
+                <select id="country" name="country">
+                    <option value="">Select Country</option>
+                    <option value="US">United States</option>
+                    <option value="CA">Canada</option>
+                    <!-- Add more countries as needed -->
+                </select>
+                <span id="countryError" class="error"></span>
+            </div>
+            <div class="form-group">
+                <label for="state">State</label>
+                <select id="state" name="state">
+                    <option value="">Select State</option>
+                    <!-- State options will be populated dynamically -->
+                </select>
+                <span id="stateError" class="error"></span>
+            </div>
+            <div class="form-group">
+                <label for="zipCode">Zip Code</label>
+                <input type="text" id="zipCode" name="zipCode" placeholder="12345" maxlength="5">
+                <span id="zipCodeError" class="error"></span>
+            </div>
+            <div class="form-group">
+                <label for="discountCode">Discount Code</label>
+                <input type="text" id="discountCode" name="discountCode" placeholder="DISCOUNT2024">
+                <button type="button" onclick="applyDiscount()">Apply</button>
+                <span id="discountCodeError" class="error"></span>
+            </div>
+            <div class="buttons">
+                <button type="submit">Submit Payment</button>
+                <button type="reset">Reset Form</button>
+            </div>
+            <div class="loading-spinner" id="loadingSpinner"></div>
+        </form>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.9/flatpickr.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Initialize Flatpickr for the expiry date field
+            flatpickr("#expiryDate", {
+                dateFormat: "m/y",
+                minDate: "today",
+                static: true
+            });
+
+            // Event listeners for form validation and submission
+            const form = document.getElementById('payment-form');
+            form.addEventListener('submit', handleSubmit);
+            form.addEventListener('reset', handleReset);
+
+            // Credit card number formatting and validation
+            const cardNumberInput = document.getElementById('cardNumber');
+            cardNumberInput.addEventListener('input', formatCardNumber);
+            cardNumberInput.addEventListener('blur', validateCardNumber);
+
+            // Expiry date validation
+            const expiryDateInput = document.getElementById('expiryDate');
+            expiryDateInput.addEventListener('blur', validateExpiryDate);
+
+            // CVV validation
+            const cvvInput = document.getElementById('cvv');
+            cvvInput.addEventListener('blur', validateCVV);
+
+            // Zip code validation
+            const zipCodeInput = document.getElementById('zipCode');
+            zipCodeInput.addEventListener('blur', validateZipCode);
+
+            // Country and state dropdown logic
+            const countrySelect = document.getElementById('country');
+            countrySelect.addEventListener('change', populateStates);
+
+            // Prevent multiple submissions
+            form.addEventListener('submit', preventMultipleSubmissions);
+
+            function formatCardNumber() {
+                let value = cardNumberInput.value.replace(/\D/g, '');
+                if (value.length > 16) value = value.substring(0, 16);
+                const formattedValue = value.match(/.{1,4}/g).join(' ');
+                cardNumberInput.value = formattedValue;
+            }
+
+            function validateCardNumber() {
+                const cardNumberError = document.getElementById('cardNumberError');
+                const value = cardNumberInput.value.replace(/\s/g, '');
+                if (value.length !== 16 || !/^\d+$/.test(value)) {
+                    cardNumberError.textContent = 'Invalid credit card number';
+                    return false;
+                }
+                cardNumberError.textContent = '';
+                return true;
+            }
+
+            function validateExpiryDate() {
+                const expiryDateError = document.getElementById('expiryDateError');
+                const value = expiryDateInput.value;
+                if (!/^\d{2}\/\d{2}$/.test(value)) {
+                    expiryDateError.textContent = 'Invalid expiry date format';
+                    return false;
+                }
+                expiryDateError.textContent = '';
+                return true;
+            }
+
+            function validateCVV() {
+                const cvvError = document.getElementById('cvvError');
+                const value = cvvInput.value;
+                if (value.length !== 3 || !/^\d{3}$/.test(value)) {
+                    cvvError.textContent = 'Invalid CVV';
+                    return false;
+                }
+                cvvError.textContent = '';
+                return true;
+            }
+
+            function validateZipCode() {
+                const zipCodeError = document.getElementById('zipCodeError');
+                const value = zipCodeInput.value;
+                if (value.length !== 5 || !/^\d{5}$/.test(value)) {
+                    zipCodeError.textContent = 'Invalid zip code';
+                    return false;
+                }
+                zipCodeError.textContent = '';
+                return true;
+            }
+
+            function handleReset() {
+                document.querySelectorAll('.error').forEach(span => span.textContent = '');
+            }
+
+            function populateStates() {
+                const stateSelect = document.getElementById('state');
+                stateSelect.innerHTML = ''; // Clear previous options
+
+                const country = countrySelect.value;
+                let states = [];
+
+                if (country === 'US') {
+                    states = ['Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California']; // Add all US states
+                } else if (country === 'CA') {
+                    states = ['Alberta', 'British Columbia', 'Manitoba', 'New Brunswick', 'Ontario']; // Add all Canadian provinces
+                }
+
+                states.forEach(state => {
+                    const option = document.createElement('option');
+                    option.value = state;
+                    option.textContent = state;
+                    stateSelect.appendChild(option);
+                });
+            }
+
+            function applyDiscount() {
+                const discountCodeInput = document.getElementById('discountCode');
+                const discountCodeError = document.getElementById('discountCodeError');
+                const discountCode = discountCodeInput.value;
+
+                if (discountCode !== 'DISCOUNT2024') {
+                    discountCodeError.textContent = 'Invalid discount code';
+                    return false;
+                }
+                discountCodeError.textContent = '';
+                alert('Discount applied!');
+                return true;
+            }
+
+            function handleSubmit(event) {
+                event.preventDefault();
+                const isValid = validateCardNumber() && validateExpiryDate() && validateCVV() && validateZipCode();
+
+                if (isValid) {
+                    const loadingSpinner = document.getElementById('loadingSpinner');
+                    loadingSpinner.style.display = 'inline-block';
+                    setTimeout(() => {
+                        loadingSpinner.style.display = 'none';
+                        alert('Payment processed successfully!');
+                    }, 2000); // Simulate a delay for processing payment
+                } else {
+                    alert('Please correct the errors in the form');
+                }
+            }
+
+            function preventMultipleSubmissions(event) {
+                const submitButton = form.querySelector('button[type="submit"]');
+                submitButton.disabled = true;
+                setTimeout(() => submitButton.disabled = false, 2000); // Enable the button after 2 seconds
+            }
+        });
+    </script>
+</body>
+</html>
